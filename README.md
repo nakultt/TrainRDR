@@ -1,12 +1,3 @@
-# React + TypeScript + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
 # 🔫 Bounty Hunter's Training Ground
 
 A lavish, feature-rich, responsive web application for training bounty hunters in AI-driven duels, chases, and tracking exercises. Built with modern web technologies and cinematic Wild West aesthetics.
@@ -64,6 +55,47 @@ A lavish, feature-rich, responsive web application for training bounty hunters i
 - **Custom hooks** for game logic, sound, and utilities
 - **Local Storage** for persistent data (scores, settings, achievements)
 
+## 🏗 Architecture
+
+TrainRDR is made of three services: a React and Phaser client, a Node/Express game API, and a Python AI service that drives opponent behaviour.
+
+```mermaid
+flowchart LR
+    subgraph Client["React 19 + Vite + Tailwind + Framer Motion"]
+        PG[Pages<br/>Landing · Auth · ModeSelection ·<br/>GameScene · Results · Leaderboard]
+        G1[game/DuelScene.ts<br/>Phaser 3 high-noon duel]
+        G2[game2/TrackingGame · ChaseGame<br/>RDR2-style tracking]
+        G3[game3/OutlawChaseGame]
+        CTX[GameContext + hooks<br/>useGame · useTimer · useSound]
+        PG --> G1 & G2 & G3
+        CTX --- PG
+    end
+
+    Client -->|REST /auth /scenario /performance<br/>/feedback /leaderboard| NODE
+    Client <-->|Socket.IO live events| NODE
+
+    subgraph NODE["Node.js + Express (src/backend)"]
+        R[routes → controllers → services]
+        SS[socketService]
+        R --> M[(MongoDB<br/>User · Player · Scenario)]
+    end
+
+    NODE -->|scenario / AI decisions| PY
+    subgraph PY["Python AI service (ai_service/main.py)"]
+        GS[/generate_scenario/]
+        AD[/ai_decision<br/>tactical analysis of game state/]
+        LS[/llm_strategy/]
+        AP[/ai_personality<br/>easy · medium · hard/]
+    end
+    LS --> GEM[(Google Gemini)]
+```
+
+| Layer | Responsibility |
+|---|---|
+| **Client** | Game modes, HUD, scoring overlay, leaderboards and auth. Phaser renders the duel scene, and React handles UI and state. |
+| **Game API** | Auth, AI-generated scenarios, saving performance results (reaction time, accuracy), feedback and leaderboards. Socket.IO provides real-time updates. |
+| **AI service** | Opponent decision-making from the current game state, difficulty-based personalities, and LLM-generated strategy and scenario text. |
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -80,6 +112,20 @@ npm run dev
 
 # Build for production
 npm run build
+```
+
+### Backend services
+
+```bash
+# Game API (Express + MongoDB + Socket.IO) — configure src/backend/.env from .env.example
+cd src/backend
+npm install
+npm run dev            # nodemon app.js (API on :3001 per frontend config)
+
+# AI service (FastAPI) — needs GEMINI_API_KEY in ai_service/.env
+cd ai_service
+pip install -r requirements.txt
+python main.py         # http://localhost:5001
 ```
 
 ## 🎮 How to Play
